@@ -12,6 +12,7 @@ message_url = "https://slack.com/api/chat.postMessage"
 channel_id ="CG8L5GUEQ"
 
 print("STARING PYBOT...")
+start_time = datetime.timestamp()
 
 server = jenkins.Jenkins('http://localhost:8080', username='admin', password='JENKINS_PASS')
 
@@ -63,7 +64,7 @@ switcher = {
 
 
 while True:
-    req_string = "%s%s%s%s%s%s" % (history_url, "?token=", access_token, "&channel=", channel_id, "&oldest=", datetime.timestamp())
+    req_string = "%s%s%s%s%s%s" % (history_url, "?token=", access_token, "&channel=", channel_id, "&oldest=", str(start_time))
     output = requests.get(req_string)
     myjson = json.loads(output.text)
 
