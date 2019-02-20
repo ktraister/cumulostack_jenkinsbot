@@ -5,25 +5,27 @@ import jenkins
 import datetime
 
 #bot token is used to write, access_token is used to read
-access_token = "ACCESS_TOKEN"
-bot_token = "BOT_TOKEN"
+access_token = ""
+bot_token = ""
 history_url = "https://slack.com/api/channels.history"
 message_url = "https://slack.com/api/chat.postMessage"
 channel_id ="CG8L5GUEQ"
 
 print("STARING PYBOT...")
-start_time = datetime.timestamp()
+#start_time = time.timestamp()
 
-server = jenkins.Jenkins('http://localhost:8080', username='admin', password='JENKINS_PASS')
+server = jenkins.Jenkins('http://localhost:49001', username='admin', password='')
 
 def list_jobs():
     jobs = server.get_jobs()
     final_jobs = ""
     for job in jobs:
+        print(job['name'])
         name = job['name']
         url = job['url']
         currjob = "%s --> %s\n" % (name, url)
         final_jobs = "%s %s" % (final_jobs, currjob)
+    print("returning " + final_jobs)
     return final_jobs
 
 def run_job(JOB):
@@ -44,10 +46,22 @@ def job_status(JOB):
     JOB = "".join(e for e in JOB)
     print("CHECKING JOB STATUS ", JOB)
     try:
-        last_build_number = server.get_job_info(JOB)['lastCompletedBuild']['number']
-        print("LAST BUILD NUMBER: ", last_build_number)
+        last_build_number = server.get_job_info(JOB)['lastBuild']['number']
         build_info = server.get_build_info(JOB, last_build_number)
-        return build_info
+        description = build_info['actions'][0]['causes'][0]['shortDescription']
+        artifacts = build_info['artifacts']
+        building = build_info['building']
+        duration = build_info['duration']
+        result = build_info['result']
+        composite_build = "JOB NAME: " + str(JOB) + "\n" +                        \
+                          "LAST BUILD DESCRIPTION: " + str(description) + "\n" +  \
+                          "BUILDING: " + str(building) + "\n" +                   \
+                          "DURATION: " + str(duration) + "MS" + "\n" +            \
+                          "BUILD NUMBER: " + str(last_build_number) + "\n" +      \
+                          "RESULT: " + str(result) + "\n" +                       \
+                          "ARTIFACTS: " + str(artifacts) + "\n"
+        print(composite_build)
+        return composite_build
     except Exception as e:
         print(str(e))
         if "does not exist" in str(e):
@@ -64,11 +78,13 @@ switcher = {
 
 
 while True:
-    req_string = "%s%s%s%s%s%s" % (history_url, "?token=", access_token, "&channel=", channel_id, "&oldest=", str(start_time))
+    #req_string = "%s%s%s%s%s%s" % (history_url, "?token=", access_token, "&channel=", channel_id, "&oldest=", str(start_time))
+    req_string = "%s%s%s%s%s" % (history_url, "?token=", access_token, "&channel=", channel_id)
+
     output = requests.get(req_string)
     myjson = json.loads(output.text)
 
-    time.sleep(3)
+    time.sleep(1)
     for message in myjson['messages']:
         try:
             with open(".histfile", "r") as f:
@@ -94,6 +110,7 @@ while True:
                 replytext = switcher.get(mytext[1], "Sorry, I didn't find a response for that")
             print("I'll respond: ", replytext)
             req_string = "%s%s%s%s%s%s%s" % (message_url, "?token=", access_token, "&channel=", channel_id, "&text=", replytext)
+            print(req_string)
             myinput = requests.get(req_string)
             if myinput.status_code != 200:
                 print("FAILED TO POST MESSAGE")
